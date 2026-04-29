@@ -1,11 +1,10 @@
 """
 Proste animowane tlo blockchain do pygame.
-Kropki to wezly sieci, linie to polaczenia, a male punkty to dane przesylane
-miedzy wezlami. Animowane sa pulsowanie wezlow i ruch danych po liniach.
-Tlo pasuje do symulacji blockchain, konsensusu i propagacji blokow.
+Tlo pokazuje kryptograficzny deszcz bitow: kolumny znakow 0 i 1 powoli
+splywaja w tle jak fragmenty hasha. Animowany jest ruch kolumn oraz ich
+delikatne migotanie, a predkosc zalezy od czasu dt.
 """
 
-import math
 import random
 import pygame
 
@@ -17,62 +16,52 @@ class AbstractBackground:
         raise NotImplementedError
 
 class MyBackground(AbstractBackground):
-    def __init__(self, width, height, node_count=20):
+    def __init__(self, width, height, column_count=34):
         self.width = width
         self.height = height
-        self.time = 0
-        self.random = random.Random(7)
-        self.nodes = [
-            {
-                "x": self.random.uniform(0.08, 0.92),
-                "y": self.random.uniform(0.10, 0.90),
-                "phase": self.random.uniform(0, math.tau),
-            }
-            for _ in range(node_count)
-        ]
-        self.lines = []
-        self.packets = []
-        self.make_lines()
-        for _ in range(8):
-            self.add_packet()
-    def make_lines(self):
-        for i in range(len(self.nodes)):
-            for j in range(i + 1, len(self.nodes)):
-                dx = self.nodes[i]["x"] - self.nodes[j]["x"]
-                dy = self.nodes[i]["y"] - self.nodes[j]["y"]
-                if math.hypot(dx, dy) < 0.30:
-                    self.lines.append((i, j))
-    def add_packet(self):
-        if self.lines:
-            self.packets.append({
-                "line": self.random.randrange(len(self.lines)),
-                "t": self.random.random(),
-                "speed": self.random.uniform(0.12, 0.35),
+        self.random = random.Random(12)
+        self.font = None
+        self.columns = []
+        for _ in range(column_count):
+            self.columns.append({
+                "x": self.random.random(),
+                "y": self.random.uniform(-1, 1),
+                "speed": self.random.uniform(0.04, 0.11),
+                "length": self.random.randrange(5, 12),
+                "phase": self.random.random(),
             })
+
     def update(self, dt):
-        self.time += dt
-        for packet in self.packets:
-            packet["t"] += packet["speed"] * dt
-            if packet["t"] > 1:
-                packet["line"] = self.random.randrange(len(self.lines))
-                packet["t"] = 0
+        for col in self.columns:
+            col["y"] += col["speed"] * dt
+            if col["y"] > 1.15:
+                col["y"] = self.random.uniform(-0.35, -0.05)
+                col["x"] = self.random.random()
+                col["length"] = self.random.randrange(5, 12)
+
     def draw(self, screen):
         self.width, self.height = screen.get_size()
-        screen.fill((8, 12, 20))
-        points = [(n["x"] * self.width, n["y"] * self.height) for n in self.nodes]
-        for a, b in self.lines:
-            pygame.draw.aaline(screen, (25, 55, 70), points[a], points[b])
-        for packet in self.packets:
-            a, b = self.lines[packet["line"]]
-            x1, y1 = points[a]
-            x2, y2 = points[b]
-            x = x1 + (x2 - x1) * packet["t"]
-            y = y1 + (y2 - y1) * packet["t"]
-            pygame.draw.circle(screen, (90, 160, 150), (int(x), int(y)), 2)
-        for node, (x, y) in zip(self.nodes, points):
-            pulse = math.sin(self.time * 2 + node["phase"])
-            color = 70 + int(pulse * 20)
-            pygame.draw.circle(screen, (color, 120, 130), (int(x), int(y)), 3)
+        if self.font is None:
+            self.font = pygame.font.SysFont("consolas", 16)
+        screen.fill((6, 10, 16))
+        self.draw_grid(screen)
+        self.draw_bits(screen)
+
+    def draw_grid(self, screen):
+        for x in range(0, self.width, 80):
+            pygame.draw.line(screen, (11, 25, 32), (x, 0), (x, self.height))
+        for y in range(0, self.height, 80):
+            pygame.draw.line(screen, (11, 25, 32), (0, y), (self.width, y))
+
+    def draw_bits(self, screen):
+        for col in self.columns:
+            x = int(col["x"] * self.width)
+            y = int(col["y"] * self.height)
+            for i in range(col["length"]):
+                bit = "1" if (i + int(col["phase"] * 10)) % 2 == 0 else "0"
+                color = (35, 85 + i * 6, 80 + i * 4)
+                text = self.font.render(bit, True, color)
+                screen.blit(text, (x, y - i * 18))
 
 def run_demo():
     pygame.init()
