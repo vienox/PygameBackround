@@ -24,19 +24,26 @@ class MyBackground(AbstractBackground):
         self.columns = []
         for _ in range(column_count):
             self.columns.append({
-                "x": self.random.random(),
-                "y": self.random.uniform(-1, 1),
-                "speed": self.random.uniform(0.04, 0.11),
+                "x": self.random.uniform(0, width),
+                "y": self.random.uniform(-height, height),
+                "drop_timer": self.random.uniform(0, 0.4),
+                "drop_interval": self.random.uniform(0.18, 0.5),
                 "length": self.random.randrange(5, 12),
                 "phase": self.random.random(),
             })
 
     def update(self, dt):
+        step = 18
         for col in self.columns:
-            col["y"] += col["speed"] * dt
-            if col["y"] > 1.15:
-                col["y"] = self.random.uniform(-0.35, -0.05)
-                col["x"] = self.random.random()
+            col["drop_timer"] += dt
+            while col["drop_timer"] >= col["drop_interval"]:
+                col["drop_timer"] -= col["drop_interval"]
+                col["y"] += step
+            if col["y"] > self.height + col["length"] * step:
+                col["y"] = self.random.uniform(-self.height * 0.4, -self.height * 0.1)
+                col["x"] = self.random.uniform(0, self.width)
+                col["drop_timer"] = 0
+                col["drop_interval"] = self.random.uniform(0.18, 0.5)
                 col["length"] = self.random.randrange(5, 12)
 
     def draw(self, screen):
@@ -55,8 +62,8 @@ class MyBackground(AbstractBackground):
 
     def draw_bits(self, screen):
         for col in self.columns:
-            x = int(col["x"] * self.width)
-            y = int(col["y"] * self.height)
+            x = int(col["x"])
+            y = int(col["y"])
             for i in range(col["length"]):
                 bit = "1" if (i + int(col["phase"] * 10)) % 2 == 0 else "0"
                 color = (35, 85 + i * 6, 80 + i * 4)
