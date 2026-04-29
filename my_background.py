@@ -1,25 +1,20 @@
 """
 Proste animowane tlo blockchain do pygame.
-Kropki oznaczaja wezly sieci, linie polaczenia, a male punkty dane
-przesylane miedzy wezlami. Animowane sa pulsowanie wezlow i ruch danych.
+Kropki to wezly sieci, linie to polaczenia, a male punkty to dane przesylane
+miedzy wezlami. Animowane sa pulsowanie wezlow i ruch danych po liniach.
 Tlo pasuje do symulacji blockchain, konsensusu i propagacji blokow.
 """
 
-from abc import ABC, abstractmethod
 import math
 import random
 import pygame
 
-
-class AbstractBackground(ABC):
-    @abstractmethod
+class AbstractBackground:
     def update(self, dt):
-        pass
+        raise NotImplementedError
 
-    @abstractmethod
     def draw(self, screen):
-        pass
-
+        raise NotImplementedError
 
 class MyBackground(AbstractBackground):
     def __init__(self, width, height, node_count=20):
@@ -27,22 +22,19 @@ class MyBackground(AbstractBackground):
         self.height = height
         self.time = 0
         self.random = random.Random(7)
-        self.nodes = []
-        self.lines = []
-        self.packets = []
-        self.make_nodes(node_count)
-        self.make_lines()
-        for _ in range(8):
-            self.add_packet()
-
-    def make_nodes(self, node_count):
-        for _ in range(node_count):
-            self.nodes.append({
+        self.nodes = [
+            {
                 "x": self.random.uniform(0.08, 0.92),
                 "y": self.random.uniform(0.10, 0.90),
                 "phase": self.random.uniform(0, math.tau),
-            })
-
+            }
+            for _ in range(node_count)
+        ]
+        self.lines = []
+        self.packets = []
+        self.make_lines()
+        for _ in range(8):
+            self.add_packet()
     def make_lines(self):
         for i in range(len(self.nodes)):
             for j in range(i + 1, len(self.nodes)):
@@ -50,7 +42,6 @@ class MyBackground(AbstractBackground):
                 dy = self.nodes[i]["y"] - self.nodes[j]["y"]
                 if math.hypot(dx, dy) < 0.30:
                     self.lines.append((i, j))
-
     def add_packet(self):
         if self.lines:
             self.packets.append({
@@ -58,7 +49,6 @@ class MyBackground(AbstractBackground):
                 "t": self.random.random(),
                 "speed": self.random.uniform(0.12, 0.35),
             })
-
     def update(self, dt):
         self.time += dt
         for packet in self.packets:
@@ -66,24 +56,12 @@ class MyBackground(AbstractBackground):
             if packet["t"] > 1:
                 packet["line"] = self.random.randrange(len(self.lines))
                 packet["t"] = 0
-                packet["speed"] = self.random.uniform(0.12, 0.35)
-
     def draw(self, screen):
         self.width, self.height = screen.get_size()
         screen.fill((8, 12, 20))
-        points = self.get_points()
-        self.draw_lines(screen, points)
-        self.draw_packets(screen, points)
-        self.draw_nodes(screen, points)
-
-    def get_points(self):
-        return [(n["x"] * self.width, n["y"] * self.height) for n in self.nodes]
-
-    def draw_lines(self, screen, points):
+        points = [(n["x"] * self.width, n["y"] * self.height) for n in self.nodes]
         for a, b in self.lines:
             pygame.draw.aaline(screen, (25, 55, 70), points[a], points[b])
-
-    def draw_packets(self, screen, points):
         for packet in self.packets:
             a, b = self.lines[packet["line"]]
             x1, y1 = points[a]
@@ -91,13 +69,10 @@ class MyBackground(AbstractBackground):
             x = x1 + (x2 - x1) * packet["t"]
             y = y1 + (y2 - y1) * packet["t"]
             pygame.draw.circle(screen, (90, 160, 150), (int(x), int(y)), 2)
-
-    def draw_nodes(self, screen, points):
         for node, (x, y) in zip(self.nodes, points):
             pulse = math.sin(self.time * 2 + node["phase"])
             color = 70 + int(pulse * 20)
             pygame.draw.circle(screen, (color, 120, 130), (int(x), int(y)), 3)
-
 
 def run_demo():
     pygame.init()
@@ -114,7 +89,6 @@ def run_demo():
         background.draw(screen)
         pygame.display.flip()
     pygame.quit()
-
 
 if __name__ == "__main__":
     run_demo()
